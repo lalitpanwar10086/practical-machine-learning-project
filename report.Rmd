@@ -1,0 +1,81 @@
+---
+title: "Coursera Practical Machine Learning Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+The training data set is made of 19622 observations on 160 columns. We can notice that many columns have NA values or blank values on almost every observation. So we will remove them, because they will not produce any information. The first seven columns give information about the people who did the test, and also timestamps. We will not take them in our model.
+
+```{r cars}
+library("ggplot2", lib.loc="~/R/win-library/3.5")
+library("forecast", lib.loc="~/R/win-library/3.5")
+library("dplyr", lib.loc="~/R/win-library/3.5")
+library("ggplot2", lib.loc="~/R/win-library/3.5")
+library("readr", lib.loc="~/R/win-library/3.5")
+library("tseries", lib.loc="~/R/win-library/3.5")
+library("data.table", lib.loc="~/R/win-library/3.5")
+library("caret", lib.loc="~/R/win-library/3.5")
+library("knitr", lib.loc="~/R/win-library/3.5")
+library("corrplot", lib.loc="~/R/win-library/3.5")
+library("rpart", lib.loc="~/R/win-library/3.5")
+library("rpart.plot", lib.loc="~/R/win-library/3.5")
+library("rattle", lib.loc="~/R/win-library/3.5")
+
+trainRaw<-read.csv("training.csv")
+testRaw<-read.csv("testing.csv")
+
+dim(trainRaw)
+dim(testRaw)
+
+names(testRaw)[160]<-"classe"
+testRaw$classe<-NA
+
+com<-rbind(trainRaw,testRaw)
+dim(com)
+
+## Data cleaninig
+
+ind <- which(colSums(is.na(com) |com=="")>0.9*dim(com)[1]) 
+com <-com[,-ind]
+com <- com[,-c(1:7)]
+
+train<-com[1:19622,]
+test<-com[19623:19642,]
+
+## Data slicing
+
+intrain<-createDataPartition(y = train$classe, p = 0.7, list = F)
+
+training<-train[intrain,]
+testing<-train[-intrain,]
+
+## Random forest model
+
+relationrf<-train(classe~., data = training, method = "rf", 
+                  trcontrol = trainControl(method = "cv", number = 5))
+
+confusionMatrix(testing$classe, predict(relationrf,testing))
+
+## Final prediction on test set
+result<-predict(relationrf, test)
+
+corrPlot <- cor(training[, -length(names(training))])
+
+modFitA1 <- rpart(classe ~ ., data=training, method="class")
+
+```
+
+## Including Plots
+
+Plots to analyse 
+
+```{r pressure, echo=FALSE}
+corrplot(corrPlot, method="color")
+fancyRpartPlot(modFitA1)
+prp(modFitA1)
+```
